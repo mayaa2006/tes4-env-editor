@@ -6,7 +6,7 @@ import tkinter as tk
 import webbrowser
 from tkinter import filedialog, ttk
 
-from . import __version__, settings
+from . import __version__, paths, settings
 from .app import App
 from .server import create_server, url_of
 
@@ -31,7 +31,7 @@ class Launcher:
         rows = [
             ('lines', 'Voice lines folder', 'The folder of existing voice lines to change, e.g. the "splice" folder made by the swap scan.', True, True),
             ('plan', 'Swap plan (optional)', 'swap-plan.json from the swap scan. Only used to show the expected wording.', False, False),
-            ('work', 'Your work folder', 'Where your clips, your choices and the finished lines are kept.', True, True),
+            ('work', 'Your work folder', 'Where your clips, your choices and the finished lines are kept.' + (' Inside the data folder by default, so the whole program stays portable.' if paths.data_dir() else ''), True, True),
         ]
         for i, (key, label, tip, folder, _required) in enumerate(rows):
             r = 2 + i * 2
@@ -43,6 +43,8 @@ class Launcher:
             ttk.Label(frame, text=tip, foreground='#666', wraplength=560).grid(row=r + 1, column=1, columnspan=2, sticky='w', padx=8, pady=(0, 8))
             self.fields += [entry, btn]
 
+        data = paths.data_dir()
+        ttk.Label(frame, text=(f'Portable: settings, your work and the speech model are kept in {data}. Copy this whole folder to take everything with you.' if data else 'Settings are kept in your user profile.'), foreground='#666', wraplength=590, justify='left').grid(row=7, column=0, columnspan=3, sticky='w', pady=(4, 0))
         buttons = ttk.Frame(frame)
         buttons.grid(row=8, column=0, columnspan=3, sticky='w', pady=(8, 0))
         self.start_btn = ttk.Button(buttons, text='Start', command=self.toggle)

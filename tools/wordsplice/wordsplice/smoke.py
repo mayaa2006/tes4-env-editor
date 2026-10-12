@@ -72,6 +72,14 @@ def run(report: Path | None) -> int:
                 raise
             return f'not installed here ({e})'
 
+    def portable_folder():
+        from . import paths
+        d = paths.data_dir()
+        if getattr(sys, 'frozen', False):
+            assert d is not None and d.parent == paths.app_dir(), f'expected a data folder next to the program, got {d}'
+        return str(d) if d else 'none (running from source)'
+
+    step('portable data folder', portable_folder)
     step('serve a line', serve_a_line)
     step('open the window', window)
     step('speech libraries', speech_libraries)
