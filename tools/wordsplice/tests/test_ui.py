@@ -97,6 +97,8 @@ def test_marking_a_word_by_hand_on_the_waveform(page):
     pg = page
     pg.click('#help button')
     pg.click('#lines li')
+    pg.wait_for_selector('#wave', state='visible')  # the editor opens once the line has loaded
+    pg.wait_for_selector('#words .word')
     box = pg.query_selector('#wave').bounding_box()
     pg.mouse.move(box['x'] + box['width'] * 0.1, box['y'] + 40)
     pg.mouse.down()
