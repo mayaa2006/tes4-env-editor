@@ -30,7 +30,7 @@ class App:
         self.rules_path = self.work_dir / 'rules.json'
         self.rules = load_rules(self.rules_path)
         self.plan = lines.load_plan(plan)
-        self.progress = {'running': False, 'done': 0, 'total': 0, 'error': ''}
+        self.progress = {'running': False, 'done': 0, 'total': 0, 'error': '', 'note': ''}
 
     # ---- lines ----
     def file_path(self, rel: str) -> Path:
@@ -51,6 +51,7 @@ class App:
                 'path': rel, 'voice': lines.voice_of(rel),
                 'aligned': words is not None,
                 'targets': len([w for w in words or [] if norm(w['text']) in self.rules]),
+                'text': ' '.join(w['text'] for w in words or []),
                 'edits': len([e for e in saved['edits'] if not e.get('skip')]), 'exported': saved.get('exported', False),
                 'subtitle': self.plan.get(Path(rel).stem.lower(), {}).get('subtitle', ''),
             })
@@ -150,10 +151,14 @@ class App:
         if self.progress['running']:
             return
         rels = lines.scan(self.lines_dir)
-        self.progress.update(running=True, done=0, total=len(rels), error='')
+        self.progress.update(running=True, done=0, total=len(rels), error='', note='')
 
         def work():
             try:
+                if any(not self.aligner.cached(str(self.lines_dir / r)) for r in rels):
+                    self.progress['note'] = 'Loading the speech model. The first time this downloads about 140 MB, so it can take a few minutes.'
+                    self.aligner.ensure_model()
+                    self.progress['note'] = ''
                 for rel in rels:
                     path = self.lines_dir / rel
                     if not self.aligner.cached(str(path)):
@@ -161,6 +166,7 @@ class App:
                     self.progress['done'] += 1
             except Exception as e:  # shown on screen, not raised in the thread
                 self.progress['error'] = str(e)
+                self.progress['note'] = ''
             finally:
                 self.progress['running'] = False
 

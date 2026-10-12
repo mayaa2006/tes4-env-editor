@@ -47,11 +47,8 @@ class Aligner:
         except ImportError:
             return False
 
-    def words(self, path: str, a: audio.Audio, hint: str = '') -> list[dict]:
-        """[{text, start, end}] in seconds, from the cache or by listening to the line."""
-        f = self._cache_file(path)
-        if f.exists():
-            return json.loads(f.read_text(encoding='utf8'))['words']
+    def ensure_model(self):
+        """Load the speech model, downloading it the first time (about 140 MB)."""
         with self._lock:
             if self._model is None:
                 try:
@@ -59,7 +56,16 @@ class Aligner:
                 except ImportError as e:
                     raise AlignUnavailable('Automatic word finding needs faster-whisper (pip install faster-whisper).') from e
                 self._model = WhisperModel(self.model_name, device='cpu', compute_type='int8')
-            segments, _ = self._model.transcribe(
+        return self._model
+
+    def words(self, path: str, a: audio.Audio, hint: str = '') -> list[dict]:
+        """[{text, start, end}] in seconds, from the cache or by listening to the line."""
+        f = self._cache_file(path)
+        if f.exists():
+            return json.loads(f.read_text(encoding='utf8'))['words']
+        model = self.ensure_model()
+        with self._lock:
+            segments, _ = model.transcribe(
                 audio.to_16k(a), language='en', word_timestamps=True, beam_size=5,
                 condition_on_previous_text=False, initial_prompt=hint or None,
             )

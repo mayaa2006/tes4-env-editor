@@ -18,6 +18,8 @@
   h2 { font-size:13px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
   h3 { font-size:14px; margin:12px 0 6px; }
   button, select, input, textarea { font:inherit; color:inherit; }
+  input[type=search] { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:4px 8px; }
+  mark { background:var(--warn-bg); color:inherit; border-radius:3px; padding:0 1px; }
   button { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer; }
   button:hover:not(:disabled) { border-color:var(--accent); }
   button:disabled { opacity:.45; cursor:default; }
@@ -80,6 +82,8 @@
 <main>
   <section aria-label="Lines">
     <h2>Lines</h2>
+    <input type="search" id="search" placeholder="Find a line: file name, voice, or words" aria-label="Find a line" title="Type part of a voice file name (e.g. MQ00_GREETING or 00026D58), a pasted path, a voice like breton/m, or words from the line. Several words must all match. Enter opens the first result; Esc clears." style="width:100%; margin-bottom:6px">
+    <select id="voiceFilter" aria-label="Voice" title="Only show lines recorded in this voice (race and sex)" style="width:100%; margin-bottom:6px"></select>
     <div class="row" style="margin-bottom:8px">
       <select id="filter" title="Which lines to show">
         <option value="all">All lines</option>
@@ -197,19 +201,49 @@ async function refresh() { S.state = await getJson('/api/state'); renderLines();
 function renderHeader() {
   $('#paths').textContent = `Lines: ${S.state.linesDir}  |  Output: ${S.state.outDir}`;
   const p = S.state.progress;
-  $('#progress').textContent = p.error ? 'Problem: ' + p.error : p.running ? `Finding words… ${p.done} of ${p.total}` : '';
+  $('#progress').textContent = p.error ? 'Problem: ' + p.error : p.running ? (p.note || `Finding words… ${p.done} of ${p.total}`) : '';
   $('#alignAll').disabled = p.running || !S.state.alignAvailable;
   $('#alignAll').title = S.state.alignAvailable ? $('#alignAll').title : 'Needs faster-whisper. Run start.bat again, or: pip install faster-whisper';
 }
+// What a line can be found by: its file name and folder, its voice, the expected wording, and the words heard in it.
+const haystack = (l) => (l.path + ' ' + l.voice + ' ' + (l.subtitle || '') + ' ' + (l.text || '')).toLowerCase().replace(/\\/g, '/');
+function searchTokens() {
+  return $('#search').value.toLowerCase().replace(/\\/g, '/').replace(/\.(mp3|wav|flac|ogg|lip)\b/g, '').split(/\s+/).filter(Boolean);
+}
+function visibleLines() {
+  const f = $('#filter').value, v = $('#voiceFilter').value, toks = searchTokens();
+  return S.state.lines.filter((l) => (f === 'all' || (f === 'targets' && l.targets > 0) || (f === 'todo' && !l.exported) || (f === 'done' && l.exported))
+    && (!v || l.voice === v) && toks.every((t) => haystack(l).includes(t)));
+}
+function mark(text, toks) {
+  // Highlight every place a search word occurs, working on the plain text so no markup is ever matched.
+  const lower = text.toLowerCase(), spans = [];
+  for (const t of toks) for (let i = lower.indexOf(t); i >= 0 && t; i = lower.indexOf(t, i + t.length)) spans.push([i, i + t.length]);
+  spans.sort((x, y) => x[0] - y[0]);
+  const merged = [];
+  for (const sp of spans) { const last = merged[merged.length - 1]; if (last && sp[0] <= last[1]) last[1] = Math.max(last[1], sp[1]); else merged.push([...sp]); }
+  let out = '', pos = 0;
+  for (const [a, b] of merged) { out += esc(text.slice(pos, a)) + '<mark>' + esc(text.slice(a, b)) + '</mark>'; pos = b; }
+  return out + esc(text.slice(pos));
+}
+function renderVoices() {
+  const sel = $('#voiceFilter'), cur = sel.value; const voices = [...new Set(S.state.lines.map((l) => l.voice).filter(Boolean))].sort();
+  sel.innerHTML = `<option value="">All voices (${voices.length})</option>` + voices.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  sel.value = voices.includes(cur) ? cur : ''; sel.hidden = voices.length < 2;
+}
 function renderLines() {
-  const f = $('#filter').value; const ul = $('#lines'); ul.innerHTML = '';
-  const shown = S.state.lines.filter((l) => f === 'all' || (f === 'targets' && l.targets > 0) || (f === 'todo' && !l.exported) || (f === 'done' && l.exported));
+  const ul = $('#lines'); ul.innerHTML = ''; renderVoices(); const toks = searchTokens();
+  const shown = visibleLines();
   $('#count').textContent = `${shown.length} of ${S.state.lines.length}`;
   $('#linesEmpty').hidden = shown.length > 0;
-  $('#linesEmpty').textContent = S.state.lines.length ? 'No lines match this filter.' : `No audio files found in ${S.state.linesDir}. Start again with --lines pointing at the folder of voice lines.`;
+  const filtering = toks.length || $('#voiceFilter').value || $('#filter').value !== 'all';
+  $('#linesEmpty').textContent = !S.state.lines.length ? `No audio files found in ${S.state.linesDir}. Start again with --lines pointing at the folder of voice lines.`
+    : filtering ? 'No lines match. Try fewer words, or clear the search and filters.' : '';
   for (const l of shown) {
     const li = document.createElement('li'); li.dataset.path = l.path; if (S.line && S.line.path === l.path) li.className = 'sel';
-    li.innerHTML = `<div class="name">${esc(l.path.split('/').pop())}</div><div class="sub">${esc(l.voice || '')} ${l.exported ? '<span class="chip ok">exported</span>' : l.edits ? `<span class="chip warn">${l.edits} to replace</span>` : l.targets ? `<span class="chip">${l.targets} default word(s)</span>` : ''} ${l.aligned ? '' : '<span class="chip">words not found yet</span>'}</div>`;
+    const heard = toks.length && l.text && toks.some((t) => !l.path.toLowerCase().includes(t) && l.text.toLowerCase().includes(t)) ? `<div class="sub">&ldquo;${mark(l.text.length > 110 ? l.text.slice(0, 110) + '…' : l.text, toks)}&rdquo;</div>` : '';
+    li.innerHTML = `<div class="name">${mark(l.path.split('/').pop(), toks)}</div><div class="sub">${mark(l.voice || '', toks)} ${l.exported ? '<span class="chip ok">exported</span>' : l.edits ? `<span class="chip warn">${l.edits} to replace</span>` : l.targets ? `<span class="chip">${l.targets} default word(s)</span>` : ''} ${l.aligned ? '' : '<span class="chip">words not found yet</span>'}</div>${heard}`;
+    li.title = l.path;
     li.onclick = guard(() => openLine(l.path)); ul.appendChild(li);
   }
 }
@@ -237,7 +271,8 @@ function renderRules() { if (document.activeElement !== $('#rules')) $('#rules')
 
 // ---------- opening a line ----------
 async function openLine(path) {
-  stop(); say('Loading…');
+  stop(); const known = S.state.lines.find((l) => l.path === path);
+  say(known && !known.aligned ? 'Finding the words in this line… The first time, this also downloads the speech model (about 140 MB), so it can take a few minutes.' : 'Loading…');
   S.line = await getJson('/api/line?path=' + encodeURIComponent(path));
   S.edits = (S.line.saved.edits || []).map((e) => ({ ...e })); S.sel = S.edits[0]?.id || null; S.undo = []; S.redo = [];
   S.nextId = 1 + Math.max(0, ...S.edits.map((e) => +String(e.id).replace(/\D/g, '') || 0));
@@ -354,6 +389,12 @@ window.addEventListener('resize', drawWave);
 
 // ---------- buttons ----------
 $('#filter').onchange = renderLines;
+$('#voiceFilter').onchange = renderLines;
+$('#search').oninput = renderLines;
+$('#search').onkeydown = (ev) => {
+  if (ev.key === 'Escape') { ev.target.value = ''; renderLines(); }
+  if (ev.key === 'Enter') { const first = visibleLines()[0]; if (first) guard(() => openLine(first.path))(); }
+};
 $('#undo').onclick = () => restore(S.undo, S.redo);
 $('#redo').onclick = () => restore(S.redo, S.undo);
 document.addEventListener('keydown', (ev) => { if ((ev.ctrlKey || ev.metaKey) && !ev.target.closest('input,textarea')) { if (ev.key === 'z') { ev.preventDefault(); restore(S.undo, S.redo); } if (ev.key === 'y') { ev.preventDefault(); restore(S.redo, S.undo); } } });
