@@ -1,8 +1,11 @@
 # Roadmap
 
-- [ ] Oblivion (TES4) plugin reader and writer (20-byte headers, Oblivion record definitions)
-- [ ] Find every mention of a character (NPC, dialogue, quests, books, scripts, conditions)
-- [ ] List a character's voice files with their subtitles
-- [ ] Bulk rename and subtitle edit with preview and undo, including pronouns
-- [ ] Recording script with exact target filenames, and female voice folder handling
+- [x] Oblivion (TES4) plugin container reader and writer (20-byte headers, compressed records); byte-exact on `Oblivion.esm`
+- [ ] Oblivion record definitions for a form editor (only the fields the swap needs are decoded)
+- [x] Find every mention of a character (NPC, dialogue, quest journal, books, topics, factions, scripts)
+- [x] List a character's voice files with their subtitles (file names computed; to be checked against the voice BSAs)
+- [x] Bulk rename and subtitle edit written to an override `.esp`, with gendered-word suggestions
+- [ ] Preview and undo in the app (command line only for now)
+- [x] Recording script with exact target filenames and the female voice folder
+- [ ] Read Oblivion BSA (v103) voice archives: confirm each file exists, find the folders others' lines live in, copy originals to splice
 - [ ] List the `.lip` files that need regenerating
