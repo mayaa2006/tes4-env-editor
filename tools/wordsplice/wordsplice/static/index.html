@@ -197,7 +197,7 @@ async function refresh() { S.state = await getJson('/api/state'); renderLines();
 function renderHeader() {
   $('#paths').textContent = `Lines: ${S.state.linesDir}  |  Output: ${S.state.outDir}`;
   const p = S.state.progress;
-  $('#progress').textContent = p.error ? 'Problem: ' + p.error : p.running ? `Finding words… ${p.done} of ${p.total}` : '';
+  $('#progress').textContent = p.error ? 'Problem: ' + p.error : p.running ? (p.note || `Finding words… ${p.done} of ${p.total}`) : '';
   $('#alignAll').disabled = p.running || !S.state.alignAvailable;
   $('#alignAll').title = S.state.alignAvailable ? $('#alignAll').title : 'Needs faster-whisper. Run start.bat again, or: pip install faster-whisper';
 }
@@ -237,7 +237,8 @@ function renderRules() { if (document.activeElement !== $('#rules')) $('#rules')
 
 // ---------- opening a line ----------
 async function openLine(path) {
-  stop(); say('Loading…');
+  stop(); const known = S.state.lines.find((l) => l.path === path);
+  say(known && !known.aligned ? 'Finding the words in this line… The first time, this also downloads the speech model (about 140 MB), so it can take a few minutes.' : 'Loading…');
   S.line = await getJson('/api/line?path=' + encodeURIComponent(path));
   S.edits = (S.line.saved.edits || []).map((e) => ({ ...e })); S.sel = S.edits[0]?.id || null; S.undo = []; S.redo = [];
   S.nextId = 1 + Math.max(0, ...S.edits.map((e) => +String(e.id).replace(/\D/g, '') || 0));

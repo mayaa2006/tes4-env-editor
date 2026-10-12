@@ -119,9 +119,23 @@ def make_handler(app: App, port: int):
     return Handler
 
 
+def create_server(app: App, port: int = 8765) -> ThreadingHTTPServer:
+    """Bind to this computer only. Uses `port` if it is free, otherwise any free port."""
+    try:
+        server = ThreadingHTTPServer(('127.0.0.1', port), None)  # type: ignore[arg-type]
+    except OSError:
+        server = ThreadingHTTPServer(('127.0.0.1', 0), None)  # type: ignore[arg-type]
+    server.RequestHandlerClass = make_handler(app, server.server_address[1])
+    return server
+
+
+def url_of(server: ThreadingHTTPServer) -> str:
+    return f'http://127.0.0.1:{server.server_address[1]}/'
+
+
 def serve(app: App, port: int = 8765, open_browser: bool = True) -> None:
-    server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(app, port))
-    url = f'http://127.0.0.1:{port}/'
+    server = create_server(app, port)
+    url = url_of(server)
     print(f'Word Splicer is running at {url}  (close this window or press Ctrl+C to stop)')
     if open_browser:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()

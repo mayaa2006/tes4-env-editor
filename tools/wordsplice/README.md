@@ -4,7 +4,15 @@ Replace single words inside existing voice lines (he → she, son → daughter, 
 
 It runs on your computer only. Nothing is uploaded.
 
-## Set up (Windows)
+## The Windows program (easiest)
+
+1. Download `WordSplicer-<version>-windows.zip` from the [latest release](https://github.com/mayaa2006/tes4-env-editor/releases/latest) and unzip it anywhere.
+2. Double-click `WordSplicer.exe`. A small window asks for the **Voice lines folder** (the `splice` folder from the swap scan) and where to keep your work. Press **Start**.
+3. The screen opens in your browser. Keep the small window open while you work; press **Stop** or close it when you're done.
+
+Windows may say it "protected your PC" because the program isn't signed: choose **More info → Run anyway**. The first time you press *Find words in all lines* it downloads a speech model (about 140 MB), so it needs internet once. Your choices are remembered next time.
+
+## Set up from source (Windows)
 
 1. Install Python 3.10 or newer from <https://www.python.org/downloads/> and tick **Add python.exe to PATH**.
 2. Open Command Prompt (not PowerShell) in this folder (`tools\wordsplice`) and run, giving the full path of the folder of voice lines you want to change:
@@ -13,7 +21,7 @@ It runs on your computer only. Nothing is uploaded.
    start.bat --lines "C:\path\to\swap\splice"
    ```
 
-   The first run sets itself up (about 150 MB, a few minutes). After that your browser opens on the screen.
+   The first run sets itself up (about 150 MB, a few minutes). After that your browser opens on the screen. Run `start.bat` with no options to get the same small window as the program.
 
 The folder of lines is the `splice` folder the swap scan makes with `--extract`: it already holds the original audio for every line where someone else says "Martin", in the folder layout the game wants. Any folder of `.mp3`/`.wav` files works.
 
@@ -63,6 +71,10 @@ You can drop files in by hand as well as using the screen.
 - The words in the line come from a speech model, so an unusual name can be heard wrongly. Mark the part by hand if so.
 - Mouth movement (`.lip` files) can't be made here. After splicing, regenerate them in the Construction Set.
 - The replacement sounds like whoever recorded it. Different speakers will need different takes.
+
+## Building the Windows program
+
+`python build_exe.py <version>` (on Windows, after `pip install -r requirements.txt -r requirements-build.txt`) makes `dist\WordSplicer\WordSplicer.exe` and a zip of it. The "Word Splicer app" workflow does this on every pull request, runs the program's built-in self-check (`WordSplicer.exe --smoke report.txt`), and attaches the zip to the release when a new version reaches `main`.
 
 ## Checks
 

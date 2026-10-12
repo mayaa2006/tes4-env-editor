@@ -28,7 +28,7 @@ On the real game files the scan finds 421 spoken responses by Martin (420 have o
 
 ### Replace words in existing audio
 
-`tools/wordsplice` is a small program for the splice work: give it clips of words you recorded (she, daughter, Ariella…, several takes of each if you like) and it replaces he/son/Martin… inside the existing lines, with a picture of each line, per-word choice of take, undo, and automatic find-and-replace across all lines. See [tools/wordsplice/README.md](tools/wordsplice/README.md).
+`tools/wordsplice` is a small program for the splice work: give it clips of words you recorded (she, daughter, Ariella…, several takes of each if you like) and it replaces he/son/Martin… inside the existing lines, with a picture of each line, per-word choice of take, undo, and automatic find-and-replace across all lines. It comes as a Windows program (`WordSplicer-<version>-windows.zip` on the [releases page](https://github.com/mayaa2006/tes4-env-editor/releases/latest)): unzip, double-click `WordSplicer.exe`, choose your folders and press Start. See [tools/wordsplice/README.md](tools/wordsplice/README.md).
 
 Lip-sync (`.lip`) files can only be generated with the original Construction Set; the tool will list which ones need it.
 

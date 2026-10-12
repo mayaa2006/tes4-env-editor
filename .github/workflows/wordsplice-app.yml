@@ -1,0 +1,70 @@
+name: Word Splicer app
+
+# Builds the Windows program for Word Splicer on every pull request (as a packaging
+# check, downloadable from the run's artifacts) and on main. On main, the zip is
+# attached to the release for the version in apps/studio/package.json. That release
+# is created by the "Windows app" workflow, so this one waits for it.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'tools/wordsplice/**'
+      - '.github/workflows/wordsplice-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wordsplice-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/wordsplice
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt -r requirements-build.txt pytest
+      - run: python -m pytest -q --ignore=tests/test_ui.py
+      - name: Version
+        id: version
+        shell: bash
+        working-directory: .
+        run: echo "version=$(node -p "require('./apps/studio/package.json').version")" >> "$GITHUB_OUTPUT"
+      - run: python build_exe.py ${{ steps.version.outputs.version }}
+      - name: Check the built program starts, serves a line and opens its window
+        shell: pwsh
+        run: |
+          $report = Join-Path $env:RUNNER_TEMP 'smoke.txt'
+          $p = Start-Process -FilePath 'dist\WordSplicer\WordSplicer.exe' -ArgumentList '--smoke', $report -Wait -PassThru
+          if (Test-Path $report) { Get-Content $report } else { Write-Host 'The program wrote no report.' }
+          if ($p.ExitCode -ne 0) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WordSplicer-windows
+          path: tools/wordsplice/dist/WordSplicer-*-windows.zip
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Attach to the release for this version
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v${{ steps.version.outputs.version }}"
+          for i in $(seq 1 50); do
+            if gh release view "$tag" >/dev/null 2>&1; then break; fi
+            echo "Waiting for release $tag ($i/50)..."; sleep 30
+          done
+          gh release view "$tag" >/dev/null
+          gh release upload "$tag" tools/wordsplice/dist/WordSplicer-*-windows.zip --clobber
