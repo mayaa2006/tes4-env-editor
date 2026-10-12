@@ -26,6 +26,10 @@ npm run tes4 -- swap-build "<path>/Oblivion.esm" swap/swap-plan.json --out Ariel
 
 On the real game files the scan finds 421 spoken responses by Martin (420 have original audio; one is text-only), 107 where others say his name (all have audio to splice), and 182 subtitles/texts to change. Martin's audio is all in `Imperial\M`; the new lines go in `Imperial\F`. "Martina Floria" is left alone.
 
+### Replace words in existing audio
+
+`tools/wordsplice` is a small program for the splice work: give it clips of words you recorded (she, daughter, Ariella…, several takes of each if you like) and it replaces he/son/Martin… inside the existing lines, with a picture of each line, per-word choice of take, undo, and automatic find-and-replace across all lines. See [tools/wordsplice/README.md](tools/wordsplice/README.md).
+
 Lip-sync (`.lip`) files can only be generated with the original Construction Set; the tool will list which ones need it.
 
 ## Skyrim code

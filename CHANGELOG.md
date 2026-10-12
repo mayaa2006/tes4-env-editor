@@ -2,6 +2,10 @@
 
 Each version here is published as a Windows installer and portable exe on the [releases page](https://github.com/mayaa2006/tes4-env-editor/releases).
 
+## 0.3.0
+
+- **Word Splicer (`tools/wordsplice`).** A small program that replaces single words inside existing voice lines with clips you provide. Add clips of words (she, daughter, Ariella…) with as many takes as you like; it finds where each word is spoken in the lines, highlights the ones to replace (he, son, Martin…), and splices your clip in with a short cross-fade, matching loudness. Choose a take per word, play the result, nudge or drag the cut points, undo, and save the finished line as an .mp3 in the same folder layout. Auto-fill does every line that has the clips it needs. Runs on your computer only; on Windows `start.bat` sets it up.
+
 ## 0.2.0
 
 - **Oblivion plugin reader and writer.** Reads `Oblivion.esm` (20-byte headers, compressed records) and writes it back byte for byte.

@@ -36,3 +36,15 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: apps/studio
       - run: npm run test:e2e
+
+  wordsplice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy miniaudio lameenc pytest playwright
+      - run: playwright install --with-deps chromium
+      - run: python -m pytest -q
+        working-directory: tools/wordsplice

@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Word Splicer</title>
+<style>
+  :root { --bg:#f4f5f7; --panel:#fff; --ink:#1d2330; --muted:#667085; --line:#d9dde5; --accent:#2f5bd8; --accent-ink:#fff; --warn:#b45309; --warn-bg:#fff4dc; --ok:#176b3a; --ok-bg:#e3f5ea; --bad:#b42318; --sel:#dbe6ff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14171d; --panel:#1c212b; --ink:#e8ebf2; --muted:#98a2b3; --line:#323a49; --accent:#6b8cff; --accent-ink:#0b1020; --warn:#fbbf24; --warn-bg:#3a2e12; --ok:#6ee7a0; --ok-bg:#12301f; --bad:#ff8a80; --sel:#27345e; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.4 system-ui, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; padding:8px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; margin:0; }
+  header .grow { flex:1; }
+  header small { color:var(--muted); }
+  main { display:grid; grid-template-columns: 260px minmax(0,1fr) 300px; gap:12px; padding:12px 16px; height:calc(100vh - 54px); }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; overflow:auto; min-height:0; }
+  h2 { font-size:13px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  h3 { font-size:14px; margin:12px 0 6px; }
+  button, select, input, textarea { font:inherit; color:inherit; }
+  button { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer; }
+  button:hover:not(:disabled) { border-color:var(--accent); }
+  button:disabled { opacity:.45; cursor:default; }
+  button.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  button.small { padding:1px 6px; font-size:12px; }
+  input[type=text], input[type=number], select, textarea { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:3px 6px; }
+  input[type=text] { width:100%; min-width:0; }
+  section label { display:grid; gap:2px; min-width:0; }
+  section [style*='display:grid'] { grid-template-columns:minmax(0,1fr); }
+  .edit label, .variant label { display:inline; }
+  .edit .head label { display:inline-flex; gap:4px; align-items:center; }
+  textarea, select, input[type=file] { max-width:100%; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .muted { color:var(--muted); }
+  .chip { display:inline-block; padding:1px 7px; border-radius:10px; background:var(--bg); border:1px solid var(--line); font-size:12px; }
+  .chip.ok { background:var(--ok-bg); color:var(--ok); border-color:transparent; }
+  .chip.warn { background:var(--warn-bg); color:var(--warn); border-color:transparent; }
+  #lines { list-style:none; margin:0; padding:0; }
+  #lines li { padding:5px 6px; border-radius:6px; cursor:pointer; border:1px solid transparent; }
+  #lines li:hover { background:var(--bg); }
+  #lines li.sel { background:var(--sel); border-color:var(--accent); }
+  #lines .name { font-size:12px; word-break:break-all; }
+  #lines .sub { font-size:12px; color:var(--muted); }
+  #wave { width:100%; height:150px; display:block; background:var(--bg); border:1px solid var(--line); border-radius:6px; cursor:crosshair; }
+  #words { margin:8px 0; line-height:2; }
+  .word { display:inline-block; margin:0 2px; padding:0 6px; border-radius:6px; border:1px solid var(--line); cursor:pointer; background:var(--bg); }
+  .word.target { background:var(--warn-bg); border-color:var(--warn); }
+  .word.picked { background:var(--sel); border-color:var(--accent); font-weight:600; }
+  .edit { border:1px solid var(--line); border-radius:8px; padding:10px; margin:10px 0; }
+  .edit.sel { border-color:var(--accent); box-shadow:0 0 0 2px var(--sel); }
+  .edit.skip { opacity:.55; }
+  .edit .head { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .edit .head input[type=text] { width:150px; }
+  .variants { margin:8px 0; display:grid; gap:4px; }
+  .variant { display:flex; gap:8px; align-items:center; padding:3px 6px; border-radius:6px; border:1px solid var(--line); }
+  .variant.on { background:var(--sel); border-color:var(--accent); }
+  .variant .lab { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .nudge { display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
+  .nudge input { width:78px; }
+  #msg { min-height:20px; }
+  #msg.err { color:var(--bad); }
+  #msg.ok { color:var(--ok); }
+  .empty { padding:24px 8px; text-align:center; color:var(--muted); }
+  .bankword { margin-bottom:10px; }
+  .bankword.need { background:var(--warn-bg); border-radius:6px; padding:2px 6px; }
+  dialog { border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--ink); max-width:560px; }
+  @media (max-width: 1100px) { main { grid-template-columns: 210px minmax(0,1fr) 250px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Word Splicer</h1>
+  <small id="paths"></small>
+  <span class="grow"></span>
+  <span id="progress" class="muted"></span>
+  <button id="alignAll" title="Listen to every line once and note where each word is spoken. Do this first; it can take a few minutes and only needs doing once.">Find words in all lines</button>
+  <button id="autoAll" title="For every line you haven't worked on, replace each default word that has a clip in the bank, then export the lines. Review them afterwards.">Auto-fill every line</button>
+  <button id="helpBtn">How this works</button>
+</header>
+<main>
+  <section aria-label="Lines">
+    <h2>Lines</h2>
+    <div class="row" style="margin-bottom:8px">
+      <select id="filter" title="Which lines to show">
+        <option value="all">All lines</option>
+        <option value="targets">Has words to replace</option>
+        <option value="todo">Not exported yet</option>
+        <option value="done">Exported</option>
+      </select>
+      <span id="count" class="muted"></span>
+    </div>
+    <ul id="lines"></ul>
+    <div id="linesEmpty" class="empty" hidden></div>
+  </section>
+
+  <section aria-label="Editor" id="editor">
+    <div class="empty" id="editorEmpty">Pick a line on the left.<br>Its words appear here and the ones that get replaced by default are highlighted.</div>
+    <div id="editorBody" hidden>
+      <div class="row">
+        <strong id="lineName" style="word-break:break-all"></strong>
+        <span id="voiceChip" class="chip"></span>
+        <span class="grow" style="flex:1"></span>
+        <button id="undo" title="Undo the last change to this line (Ctrl+Z)">Undo</button>
+        <button id="redo" title="Redo (Ctrl+Y)">Redo</button>
+      </div>
+      <div id="subtitle" class="muted"></div>
+      <div id="lineMessage" class="chip warn" hidden></div>
+      <canvas id="wave" title="Drag the edges of the blue box to adjust it. Drag over empty space to mark a new word."></canvas>
+      <div id="words" aria-label="Words in this line"></div>
+      <div class="row">
+        <button id="playOrig" title="Play the line as it is now">&#9654; Original</button>
+        <button id="playResult" title="Play the line with your replacements (nothing is saved)">&#9654; With replacements</button>
+        <button id="fill" title="Replace every default word in this line that has a clip in the bank">Auto-fill this line</button>
+        <button id="export" class="primary" title="Write the finished line as an .mp3 into the output folder">Save line as .mp3</button>
+      </div>
+      <div id="msg" role="status"></div>
+      <div id="edits"></div>
+      <div id="noEdits" class="empty" hidden>Nothing is being replaced in this line yet.<br>Click a highlighted word above, or use Auto-fill.</div>
+    </div>
+  </section>
+
+  <section aria-label="Clip bank">
+    <h2>Your clips</h2>
+    <div id="bank"></div>
+    <div id="bankEmpty" class="empty" hidden>No clips yet.<br>Add one below, e.g. the word <b>she</b>, and you can add several for the same word to choose between.</div>
+    <h3>Add clips</h3>
+    <div style="display:grid; gap:6px">
+      <label>The word you recorded <input type="text" id="addWord" list="wordList" placeholder="she" title="The word spoken in the clip, e.g. she, her, Ariella's"></label>
+      <label>Name for this version <input type="text" id="addLabel" placeholder="warm, flat, slow..." title="Optional. Helps you tell versions apart."></label>
+      <label>Voice it suits <select id="addVoice" title="Optional. Lines in this voice will pick this clip first."></select></label>
+      <input type="file" id="addFile" accept=".wav,.mp3,.flac,.ogg" multiple title="Pick one or more audio files of that word">
+      <button id="addBtn" title="Copy the chosen files into the bank">Add to bank</button>
+      <div id="addMsg" class="muted"></div>
+    </div>
+    <datalist id="wordList"></datalist>
+    <h3>Words to replace</h3>
+    <p class="muted" style="margin:0 0 6px">Left is found in the existing audio, right is the word you give a clip for. One per line, like <code>he = she</code>.</p>
+    <textarea id="rules" rows="8" style="width:100%" spellcheck="false"></textarea>
+    <button id="saveRules" style="margin-top:6px">Save word list</button>
+  </section>
+</main>
+
+<dialog id="help">
+  <h3 style="margin-top:0">How this works</h3>
+  <ol>
+    <li>Add clips on the right: the word, a name for this take, and the file. Add as many takes of a word as you like.</li>
+    <li>Click <b>Find words in all lines</b> once. It listens to each line and notes where every word is.</li>
+    <li>Open a line. Words that get replaced by default are highlighted. For each one, pick a take (or leave it on Auto), nudge the edges if the cut sounds off, then press <b>&#9654; With replacements</b>.</li>
+    <li>Press <b>Save line as .mp3</b>. The file goes into the output folder with the same name and folder layout as the game expects.</li>
+  </ol>
+  <p class="muted">The mouth movement (.lip files) can't be made here; use the Construction Set for that.</p>
+  <form method="dialog"><button class="primary">Got it</button></form>
+</dialog>
+
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = (w) => w.toLowerCase().replace(/[‘’]/g, "'").replace(/^[^a-z0-9']+|[^a-z0-9']+$/g, '').replace(/^'+|'+$/g, '');
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { 'X-Wordsplice': '1', ...(opts.headers || {}) } });
+  if (!res.ok) { let m = res.statusText; try { m = (await res.json()).error || m; } catch {} throw new Error(m); }
+  return res;
+}
+const getJson = async (p) => (await api(p)).json();
+const postJson = async (p, body) => api(p, { method: 'POST', body: JSON.stringify(body) });
+
+const S = { state: null, line: null, edits: [], sel: null, undo: [], redo: [], drag: null, saveTimer: null, nextId: 1 };
+
+// ---------- audio ----------
+let ctx = null, current = null; const buffers = new Map();
+async function buffer(url, fetcher) {
+  if (!buffers.has(url)) { const ab = await (fetcher ? fetcher() : (await api(url)).arrayBuffer()); ctx = ctx || new AudioContext(); buffers.set(url, await ctx.decodeAudioData(ab)); }
+  return buffers.get(url);
+}
+function stop() { if (current) { try { current.stop(); } catch {} current = null; } }
+async function play(buf, from = 0, dur) {
+  stop(); ctx = ctx || new AudioContext(); if (ctx.state === 'suspended') await ctx.resume();
+  const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
+  src.start(0, from, dur); current = src; src.onended = () => { if (current === src) current = null; };
+}
+const lineUrl = () => '/api/audio?path=' + encodeURIComponent(S.line.path);
+async function playOriginal(from, dur) { await play(await buffer(lineUrl()), from, dur); }
+async function playClip(id) { await play(await buffer('/api/clip?id=' + encodeURIComponent(id))); }
+async function playResult() {
+  const edits = S.edits;
+  const ab = await (await postJson('/api/render', { path: S.line.path, edits })).arrayBuffer();
+  ctx = ctx || new AudioContext(); await play(await ctx.decodeAudioData(ab));
+}
+
+// ---------- messages ----------
+function say(text, kind = '') { const m = $('#msg'); m.textContent = text; m.className = kind; }
+function guard(fn) { return async (...a) => { try { await fn(...a); } catch (e) { say(e.message, 'err'); } }; }
+
+// ---------- state and lists ----------
+async function refresh() { S.state = await getJson('/api/state'); renderLines(); renderBank(); renderRules(); renderHeader(); }
+function renderHeader() {
+  $('#paths').textContent = `Lines: ${S.state.linesDir}  |  Output: ${S.state.outDir}`;
+  const p = S.state.progress;
+  $('#progress').textContent = p.error ? 'Problem: ' + p.error : p.running ? `Finding words… ${p.done} of ${p.total}` : '';
+  $('#alignAll').disabled = p.running || !S.state.alignAvailable;
+  $('#alignAll').title = S.state.alignAvailable ? $('#alignAll').title : 'Needs faster-whisper. Run start.bat again, or: pip install faster-whisper';
+}
+function renderLines() {
+  const f = $('#filter').value; const ul = $('#lines'); ul.innerHTML = '';
+  const shown = S.state.lines.filter((l) => f === 'all' || (f === 'targets' && l.targets > 0) || (f === 'todo' && !l.exported) || (f === 'done' && l.exported));
+  $('#count').textContent = `${shown.length} of ${S.state.lines.length}`;
+  $('#linesEmpty').hidden = shown.length > 0;
+  $('#linesEmpty').textContent = S.state.lines.length ? 'No lines match this filter.' : `No audio files found in ${S.state.linesDir}. Start again with --lines pointing at the folder of voice lines.`;
+  for (const l of shown) {
+    const li = document.createElement('li'); li.dataset.path = l.path; if (S.line && S.line.path === l.path) li.className = 'sel';
+    li.innerHTML = `<div class="name">${esc(l.path.split('/').pop())}</div><div class="sub">${esc(l.voice || '')} ${l.exported ? '<span class="chip ok">exported</span>' : l.edits ? `<span class="chip warn">${l.edits} to replace</span>` : l.targets ? `<span class="chip">${l.targets} default word(s)</span>` : ''} ${l.aligned ? '' : '<span class="chip">words not found yet</span>'}</div>`;
+    li.onclick = guard(() => openLine(l.path)); ul.appendChild(li);
+  }
+}
+function wordsInBank() { return Object.keys(S.state.bank); }
+function renderBank() {
+  const box = $('#bank'); box.innerHTML = ''; const bank = S.state.bank;
+  const needed = [...new Set(Object.values(S.state.rules))].filter((w) => !bank[w]);
+  const words = [...new Set([...Object.keys(bank), ...needed])].sort();
+  $('#bankEmpty').hidden = Object.keys(bank).length > 0;
+  for (const w of words) {
+    const d = document.createElement('div'); d.className = 'bankword' + (bank[w] ? '' : ' need');
+    d.innerHTML = `<strong>${esc(w)}</strong> <span class="muted">${bank[w] ? bank[w].length + ' take' + (bank[w].length > 1 ? 's' : '') : 'no clip yet'}</span>`;
+    for (const v of bank[w] || []) {
+      const r = document.createElement('div'); r.className = 'variant';
+      r.innerHTML = `<button class="small" title="Play this clip">&#9654;</button><span class="lab" title="${esc(v.id)}">${esc(v.label)} <span class="muted">${v.duration.toFixed(2)}s${v.voice ? ' · ' + esc(v.voice) : ''}</span></span>`;
+      r.querySelector('button').onclick = guard(() => playClip(v.id)); d.appendChild(r);
+    }
+    box.appendChild(d);
+  }
+  $('#wordList').innerHTML = [...new Set([...Object.keys(bank), ...Object.values(S.state.rules)])].sort().map((w) => `<option value="${esc(w)}">`).join('');
+  const voices = ['', ...new Set(S.state.lines.map((l) => l.voice).filter(Boolean))].sort();
+  const cur = $('#addVoice').value; $('#addVoice').innerHTML = voices.map((v) => `<option value="${esc(v)}">${v ? esc(v) : 'Any voice'}</option>`).join(''); $('#addVoice').value = cur;
+}
+function renderRules() { if (document.activeElement !== $('#rules')) $('#rules').value = Object.entries(S.state.rules).map(([a, b]) => `${a} = ${b}`).join('\n'); }
+
+// ---------- opening a line ----------
+async function openLine(path) {
+  stop(); say('Loading…');
+  S.line = await getJson('/api/line?path=' + encodeURIComponent(path));
+  S.edits = (S.line.saved.edits || []).map((e) => ({ ...e })); S.sel = S.edits[0]?.id || null; S.undo = []; S.redo = [];
+  S.nextId = 1 + Math.max(0, ...S.edits.map((e) => +String(e.id).replace(/\D/g, '') || 0));
+  $('#editorEmpty').hidden = true; $('#editorBody').hidden = false;
+  $('#lineName').textContent = path.split('/').pop(); $('#voiceChip').textContent = S.line.voice || 'voice unknown'; $('#voiceChip').hidden = false;
+  $('#subtitle').textContent = S.line.subtitle ? 'Expected after the change: ' + S.line.subtitle : '';
+  const lm = $('#lineMessage'); lm.hidden = !S.line.message; lm.textContent = S.line.message;
+  say(S.line.words.length || S.line.message ? '' : 'No words were found in this line.');
+  renderLines(); renderAll();
+}
+function renderAll() { renderWords(); renderEdits(); drawWave(); $('#undo').disabled = !S.undo.length; $('#redo').disabled = !S.redo.length; }
+
+// ---------- edits (with undo) ----------
+function commit(mutator) {
+  S.undo.push(JSON.stringify(S.edits)); if (S.undo.length > 100) S.undo.shift(); S.redo = [];
+  mutator(); renderAll(); queueSave();
+}
+function restore(from, to) { if (!from.length) return; to.push(JSON.stringify(S.edits)); S.edits = JSON.parse(from.pop()); if (!S.edits.some((e) => e.id === S.sel)) S.sel = S.edits[0]?.id || null; renderAll(); queueSave(); }
+function queueSave() { clearTimeout(S.saveTimer); S.saveTimer = setTimeout(guard(async () => { await postJson('/api/save', { path: S.line.path, edits: S.edits }); const l = S.state.lines.find((x) => x.path === S.line.path); if (l) { l.edits = S.edits.filter((e) => !e.skip).length; l.exported = false; renderLines(); } }), 400); }
+function editFor(wordIndex) { return S.edits.find((e) => e.id === 'w' + wordIndex); }
+function toggleWord(w) {
+  const ex = editFor(w.i);
+  if (ex) { S.sel = ex.id; renderAll(); return; }
+  commit(() => { const e = { id: 'w' + w.i, start: w.start, end: w.end, word: w.norm, replacement: w.replacement || '', clip: 'auto', text: w.text }; S.edits.push(e); S.sel = e.id; });
+}
+
+// ---------- rendering the editor ----------
+function renderWords() {
+  const box = $('#words'); box.innerHTML = '';
+  if (!S.line.words.length) { box.innerHTML = '<span class="muted">No words found yet. Press “Find words in all lines”, or drag over the waveform to mark a word yourself.</span>'; return; }
+  for (const w of S.line.words) {
+    const s = document.createElement('span'); const e = editFor(w.i);
+    s.className = 'word' + (w.target ? ' target' : '') + (e && !e.skip ? ' picked' : ''); s.textContent = w.text;
+    s.title = w.target ? `Usually replaced by “${w.replacement}”. Click to replace it here.` : 'Click to replace this word too';
+    s.onclick = () => toggleWord(w); s.onmouseenter = () => playOriginal(w.start, w.end - w.start).catch(() => {}); box.appendChild(s);
+  }
+}
+function renderEdits() {
+  const box = $('#edits'); box.innerHTML = ''; $('#noEdits').hidden = S.edits.length > 0;
+  for (const e of S.edits) {
+    const bank = S.state.bank[norm(e.replacement || '')] || [];
+    const d = document.createElement('div'); d.className = 'edit' + (S.sel === e.id ? ' sel' : '') + (e.skip ? ' skip' : ''); d.dataset.id = e.id;
+    d.innerHTML = `<div class="head"><span>Replace <b>${esc(e.text || e.word || 'region')}</b> with</span>
+      <input type="text" list="wordList" value="${esc(e.replacement || '')}" placeholder="a word, e.g. she" aria-label="Replacement word" title="The word to put here. It must have a clip in your bank.">
+      <label title="Leave this word as it is in the audio"><input type="checkbox" class="skip" ${e.skip ? 'checked' : ''}> keep original</label>
+      <button class="small po" title="Play only this word of the original">&#9654; original word</button>
+      <button class="small rm" title="Stop replacing this word">Remove</button></div>
+      <div class="variants"></div>
+      <div class="nudge"><span class="muted">Start</span><button class="small" data-n="start" data-d="-0.01" title="Move the start 10 ms earlier">&minus;10ms</button><button class="small" data-n="start" data-d="0.01" title="Move the start 10 ms later">+10ms</button>
+        <span class="muted" style="margin-left:8px">End</span><button class="small" data-n="end" data-d="-0.01" title="Move the end 10 ms earlier">&minus;10ms</button><button class="small" data-n="end" data-d="0.01" title="Move the end 10 ms later">+10ms</button>
+        <span class="muted" style="margin-left:8px">${e.start.toFixed(3)}s &ndash; ${e.end.toFixed(3)}s</span></div>`;
+    const vbox = d.querySelector('.variants');
+    if (!bank.length) vbox.innerHTML = `<span class="chip warn">No clip for “${esc(e.replacement || '?')}” yet. Add one on the right.</span>`;
+    else {
+      const opts = [{ id: 'auto', label: 'Auto (best match for this voice and length)' }, ...bank];
+      for (const v of opts) {
+        const r = document.createElement('div'); r.className = 'variant' + ((e.clip || 'auto') === v.id ? ' on' : '');
+        r.innerHTML = `<input type="radio" name="clip-${esc(e.id)}" ${(e.clip || 'auto') === v.id ? 'checked' : ''} aria-label="Use ${esc(v.label)}"><span class="lab">${esc(v.label)}${v.duration ? ` <span class="muted">${v.duration.toFixed(2)}s${v.voice ? ' · ' + esc(v.voice) : ''}</span>` : ''}</span>${v.id === 'auto' ? '' : '<button class="small" title="Play this clip">&#9654;</button>'}`;
+        r.querySelector('input').onchange = () => commit(() => { e.clip = v.id; S.sel = e.id; });
+        const pb = r.querySelector('button'); if (pb) pb.onclick = guard(() => playClip(v.id));
+        vbox.appendChild(r);
+      }
+      if ((e.clip || 'auto') !== 'auto') {
+        const l = document.createElement('label'); l.className = 'muted';
+        l.innerHTML = `<input type="checkbox"> Use this take for every “${esc(e.replacement)}” in ${S.line.voice ? esc(S.line.voice) + ' lines' : 'all lines'}`;
+        l.querySelector('input').onchange = guard(async (ev) => { await postJson('/api/prefer', { word: norm(e.replacement), voice: S.line.voice, clip: ev.target.checked ? e.clip : null }); say(ev.target.checked ? 'Remembered.' : 'No longer the favourite.', 'ok'); });
+        vbox.appendChild(l);
+      }
+    }
+    d.onclick = (ev) => { if (S.sel !== e.id && !ev.target.closest('input,button')) { S.sel = e.id; renderEdits(); drawWave(); } };
+    const inp = d.querySelector('input[type=text]'); inp.onchange = () => commit(() => { e.replacement = inp.value.trim(); e.clip = 'auto'; });
+    d.querySelector('.skip').onchange = (ev) => commit(() => { e.skip = ev.target.checked; });
+    d.querySelector('.po').onclick = guard(() => playOriginal(e.start, e.end - e.start));
+    d.querySelector('.rm').onclick = () => commit(() => { S.edits = S.edits.filter((x) => x !== e); if (S.sel === e.id) S.sel = S.edits[0]?.id || null; });
+    d.querySelectorAll('[data-n]').forEach((b) => b.onclick = () => commit(() => { const k = b.dataset.n; e[k] = Math.max(0, Math.min(S.line.duration, +(e[k] + +b.dataset.d).toFixed(4))); if (e.end <= e.start) e[k] = k === 'start' ? e.end - 0.005 : e.start + 0.005; S.sel = e.id; }));
+    box.appendChild(d);
+  }
+}
+
+// ---------- waveform ----------
+const wave = $('#wave');
+function drawWave() {
+  if (!S.line) return; const dpr = window.devicePixelRatio || 1, W = wave.clientWidth, H = wave.clientHeight;
+  wave.width = W * dpr; wave.height = H * dpr; const g = wave.getContext('2d'); g.scale(dpr, dpr);
+  const css = getComputedStyle(document.body); const ink = css.color, acc = css.getPropertyValue('--accent').trim(), warn = css.getPropertyValue('--warn').trim();
+  g.clearRect(0, 0, W, H); const x = (t) => t / S.line.duration * W;
+  for (const w of S.line.words) { g.fillStyle = w.target ? warn + '33' : ink + '10'; g.fillRect(x(w.start), 0, Math.max(1, x(w.end) - x(w.start)), H); }
+  g.strokeStyle = ink; g.globalAlpha = .75; g.beginPath(); const pk = S.line.peaks;
+  pk.forEach(([lo, hi], i) => { const px = i / pk.length * W; g.moveTo(px, H / 2 - hi * H / 2); g.lineTo(px, H / 2 - lo * H / 2); }); g.stroke(); g.globalAlpha = 1;
+  for (const e of S.edits) { const on = e.id === S.sel; g.fillStyle = acc + (on ? '44' : '22'); g.fillRect(x(e.start), 0, x(e.end) - x(e.start), H); g.strokeStyle = acc; g.lineWidth = on ? 2 : 1; g.strokeRect(x(e.start), 1, x(e.end) - x(e.start), H - 2); }
+  if (S.drag && S.drag.kind === 'new') { g.fillStyle = acc + '33'; g.fillRect(x(Math.min(S.drag.a, S.drag.b)), 0, Math.abs(x(S.drag.b) - x(S.drag.a)), H); }
+}
+const tAt = (ev) => { const r = wave.getBoundingClientRect(); return Math.max(0, Math.min(S.line.duration, (ev.clientX - r.left) / r.width * S.line.duration)); };
+wave.addEventListener('mousedown', (ev) => {
+  if (!S.line) return; const t = tAt(ev), px = S.line.duration / wave.clientWidth * 6; const e = S.edits.find((x) => x.id === S.sel);
+  if (e && Math.abs(t - e.start) < px) S.drag = { kind: 'start', e, before: JSON.stringify(S.edits) };
+  else if (e && Math.abs(t - e.end) < px) S.drag = { kind: 'end', e, before: JSON.stringify(S.edits) };
+  else S.drag = { kind: 'new', a: t, b: t };
+});
+window.addEventListener('mousemove', (ev) => {
+  if (!S.drag) return; const t = tAt(ev);
+  if (S.drag.kind === 'new') S.drag.b = t; else S.drag.e[S.drag.kind] = +(S.drag.kind === 'start' ? Math.min(t, S.drag.e.end - 0.005) : Math.max(t, S.drag.e.start + 0.005)).toFixed(4);
+  drawWave();
+});
+window.addEventListener('mouseup', () => {
+  const d = S.drag; S.drag = null; if (!d) return;
+  if (d.kind === 'new') {
+    const a = Math.min(d.a, d.b), b = Math.max(d.a, d.b);
+    if (b - a >= 0.03) commit(() => { const e = { id: 'm' + S.nextId++, start: +a.toFixed(4), end: +b.toFixed(4), word: '', replacement: '', clip: 'auto', text: 'marked part' }; S.edits.push(e); S.sel = e.id; });
+    else { const hit = S.edits.find((e) => a >= e.start && a <= e.end); if (hit) { S.sel = hit.id; renderEdits(); drawWave(); } else { playOriginal(Math.max(0, a - 0.2), 0.8).catch(() => {}); } }
+  } else if (JSON.stringify(S.edits) !== d.before) { S.undo.push(d.before); S.redo = []; renderAll(); queueSave(); }
+});
+window.addEventListener('resize', drawWave);
+
+// ---------- buttons ----------
+$('#filter').onchange = renderLines;
+$('#undo').onclick = () => restore(S.undo, S.redo);
+$('#redo').onclick = () => restore(S.redo, S.undo);
+document.addEventListener('keydown', (ev) => { if ((ev.ctrlKey || ev.metaKey) && !ev.target.closest('input,textarea')) { if (ev.key === 'z') { ev.preventDefault(); restore(S.undo, S.redo); } if (ev.key === 'y') { ev.preventDefault(); restore(S.redo, S.undo); } } });
+$('#playOrig').onclick = guard(() => playOriginal(0));
+$('#playResult').onclick = guard(async () => { say('Building…'); await playResult(); say(''); });
+$('#fill').onclick = guard(async () => {
+  const r = await getJson('/api/autofill?path=' + encodeURIComponent(S.line.path));
+  commit(() => { const keep = S.edits.filter((e) => !r.edits.some((n) => n.id === e.id)); S.edits = [...keep, ...r.edits]; S.sel = S.edits[0]?.id || null; });
+  say(r.missing.length ? `Filled in. No clip yet for: ${r.missing.join(', ')}.` : r.edits.length ? 'Filled in.' : 'No default words in this line.', r.missing.length ? 'err' : 'ok');
+});
+$('#export').onclick = guard(async () => {
+  clearTimeout(S.saveTimer); say('Saving…'); const r = await (await postJson('/api/export', { path: S.line.path, edits: S.edits })).json();
+  say(`Saved ${r.out} (${r.duration}s).`, 'ok'); await refresh();
+});
+$('#alignAll').onclick = guard(async () => { await postJson('/api/align-all', {}); poll(); });
+async function poll() { await refresh(); if (S.state.progress.running) setTimeout(poll, 1500); }
+$('#autoAll').onclick = guard(async () => {
+  if (!confirm('Fill in and export every line you have not worked on yet? Lines with missing clips are skipped.')) return;
+  let n = 0, skipped = 0; $('#progress').textContent = 'Working…';
+  for (const l of S.state.lines) {
+    if (l.edits || l.exported) continue;
+    try { const r = await getJson('/api/autofill?path=' + encodeURIComponent(l.path)); if (!r.edits.length) continue; await postJson('/api/export', { path: l.path, edits: r.edits }); n++; } catch { skipped++; }
+    $('#progress').textContent = `Working… ${n} written`;
+  }
+  await refresh(); $('#progress').textContent = `Wrote ${n} line(s)${skipped ? `, ${skipped} skipped (missing clips or words not found yet)` : ''}.`;
+});
+$('#addBtn').onclick = guard(async () => {
+  const word = $('#addWord').value.trim(), files = [...$('#addFile').files]; const m = $('#addMsg');
+  if (!word) return void (m.textContent = 'Type the word first.'); if (!files.length) return void (m.textContent = 'Choose at least one audio file.');
+  for (const f of files) {
+    const q = new URLSearchParams({ word, filename: f.name, label: files.length === 1 ? $('#addLabel').value : '', voice: $('#addVoice').value });
+    await api('/api/bank/add?' + q, { method: 'POST', body: await f.arrayBuffer() });
+  }
+  m.textContent = `Added ${files.length} clip(s) for “${word}”.`; $('#addFile').value = ''; $('#addLabel').value = ''; await refresh(); if (S.line) renderEdits();
+});
+$('#saveRules').onclick = guard(async () => {
+  const rules = {}; for (const ln of $('#rules').value.split('\n')) { const [a, b] = ln.split('='); if (a && b && a.trim() && b.trim()) rules[a.trim()] = b.trim(); }
+  await postJson('/api/rules', { rules }); await refresh(); if (S.line) await openLine(S.line.path);
+});
+$('#helpBtn').onclick = () => $('#help').showModal();
+
+refresh().then(() => { if (S.state.lines.length && !Object.keys(S.state.bank).length) $('#help').showModal(); }).catch((e) => say(e.message, 'err'));
+</script>
+</body>
+</html>
