@@ -7,5 +7,6 @@
 - [x] Bulk rename and subtitle edit written to an override `.esp`, with gendered-word suggestions
 - [ ] Preview and undo in the app (command line only for now)
 - [x] Recording script with exact target filenames and the female voice folder
-- [ ] Read Oblivion BSA (v103) voice archives: confirm each file exists, find the folders others' lines live in, copy originals to splice
+- [x] Read Oblivion BSA (v103) voice archives: confirm each file exists, find the folders others' lines live in, copy originals to splice
+- [ ] Put the spliced/new audio back and check every file in the recording script is present
 - [ ] List the `.lip` files that need regenerating

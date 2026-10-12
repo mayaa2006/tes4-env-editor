@@ -4,17 +4,18 @@ const csvCell = (s: string | number) => `"${String(s).replace(/"/g, '""')}"`;
 
 /** One row per audio file that needs new audio. Open in a spreadsheet or work down the Markdown list. */
 export function recordingScriptCsv(plan: SwapPlan): string {
-  const rows = [['#', 'task', 'file name', 'save in folder', 'new subtitle', 'original subtitle', 'quest', 'topic', 'notes']];
+  const rows = [['#', 'task', 'file name', 'save in folder', 'new subtitle', 'original subtitle', 'quest', 'topic', 'original audio found in', 'notes']];
   sorted(plan.voice).forEach((v, i) =>
     rows.push([
       String(i + 1),
       v.kind === 'voice' ? 'record whole line' : 'splice the new name in',
-      v.file + '.mp3',
+      (v.audioName ?? v.file) + '.mp3',
       v.folder ?? 'same folder as the original file (found in the voice archives)',
       v.subtitle,
       v.originalSubtitle,
       v.quest,
       v.topic,
+      v.found ? (v.found.length ? v.found.map((f) => f.folder + (f.hasLip ? ' (+lip)' : '')).join('; ') : 'NOT FOUND in the voice archives') : 'not checked',
       v.notes,
     ]),
   );
@@ -40,6 +41,13 @@ export function planSummaryMarkdown(plan: SwapPlan): string {
   lines.push(`- **${review.length} subtitles** also contain gendered words (he, him, son...). Review them in \`swap-plan.json\`, or build with \`--accept-suggestions\`.`);
   lines.push(`- **${plan.pronounOnly.length} lines** in the character's quests talk about someone with a gendered word but no name. They may mean the character; they are listed in \`pronoun-check.csv\` and not changed.`);
   lines.push(`- **${plan.reportOnly.length} scripts** mention the name in their source (usually variable names). Nothing to do unless they print the name on screen.`, '');
+  const c = plan.voiceCheck;
+  if (c) {
+    lines.push('## Voice archive check', '');
+    lines.push(`Checked ${c.archives.join(', ')}.`);
+    lines.push(`- Martin's own lines: ${c.voiceFound} of ${c.voiceFound + c.voiceMissing} have original audio.`);
+    lines.push(`- Lines where others say the name: ${c.nameFound} of ${c.nameFound + c.nameMissing} have original audio to splice.`, '');
+  }
   lines.push('## Needs the Construction Set', '');
   lines.push('- Lip-sync files (`.lip`) for every new audio file. The game plays new audio without them, but the mouth will not move.');
   if (plan.preset.setFemale && plan.npc.hasFaceData) lines.push('- The face. The character still has the original face data and needs a new face.');

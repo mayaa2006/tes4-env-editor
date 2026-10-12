@@ -2,7 +2,7 @@
 
 An editor for Oblivion (TES4) `.esm`/`.esp` plugins, with automated character-swap tooling: find every place a character's name appears, list the voice files and subtitles that go with them, and replace them in bulk.
 
-> **Status: early.** The Oblivion plugin reader and the character-swap scan/build work on the real `Oblivion.esm` (read back byte for byte). The rest of this repository is still the Skyrim editor it was copied from. Voice-archive (BSA) checks are not done yet. See [ROADMAP.md](ROADMAP.md).
+> **Status: early.** The Oblivion plugin reader and the character-swap scan/build work on the real `Oblivion.esm` (read back byte for byte). The rest of this repository is still the Skyrim editor it was copied from. The voice archives are checked: file names match the real game audio. See [ROADMAP.md](ROADMAP.md).
 
 ## First goal
 
@@ -18,13 +18,13 @@ Replace Martin Septim with Ariella Septim (female) in `Oblivion.esm`:
 Needs Node 22+ and `npm ci`.
 
 ```
-npm run tes4 -- swap-scan  "<path>/Oblivion.esm" --out swap
+npm run tes4 -- swap-scan  "<path>/Oblivion.esm" --out swap --extract
 npm run tes4 -- swap-build "<path>/Oblivion.esm" swap/swap-plan.json --out ArielleSwap.esp [--accept-suggestions]
 ```
 
-`swap-scan` writes into the folder: `summary.md` (what needs doing), `recording-script.csv` (one row per audio file: the exact file name, where to save it, the new subtitle, and whether to record the whole line or splice the name into the existing audio), `pronoun-check.csv` and `swap-plan.json`. Edit any `proposed` subtitle in `swap-plan.json` before building. `swap-build` writes a small override `.esp` (needs `Oblivion.esm`); the game file is never changed. Gendered words (he, him, son...) are only rewritten with `--accept-suggestions`, because they can also refer to other characters; check the result.
+`swap-scan` also looks for `Oblivion - Voices1.bsa` / `Voices2.bsa` next to the `.esm` (or give `--voice <bsa>`), checks each audio file exists, and with `--extract` copies the originals out: `splice/` holds the files where someone else says the name (edit them in place; keep the folder layout), `reference/` holds Martin's own originals for timing. It writes into the folder: `summary.md` (what needs doing), `recording-script.csv` (one row per audio file: the exact file name, where to save it, the new subtitle, and whether to record the whole line or splice the name into the existing audio), `pronoun-check.csv` and `swap-plan.json`. Edit any `proposed` subtitle in `swap-plan.json` before building. `swap-build` writes a small override `.esp` (needs `Oblivion.esm`); the game file is never changed. Gendered words (he, him, son...) are only rewritten with `--accept-suggestions`, because they can also refer to other characters; check the result.
 
-On the real game file the scan finds 421 spoken responses by Martin, 107 where others say his name, and 182 subtitles/texts to change. "Martina Floria" is left alone.
+On the real game files the scan finds 421 spoken responses by Martin (420 have original audio; one is text-only), 107 where others say his name (all have audio to splice), and 182 subtitles/texts to change. Martin's audio is all in `Imperial\M`; the new lines go in `Imperial\F`. "Martina Floria" is left alone.
 
 Lip-sync (`.lip`) files can only be generated with the original Construction Set; the tool will list which ones need it.
 

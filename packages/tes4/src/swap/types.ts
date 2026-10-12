@@ -53,6 +53,20 @@ export interface VoiceEntry {
   subtitle: string;
   originalSubtitle: string;
   notes: string;
+  /** Filled by the voice-archive check: where the original audio lives. Empty when not found. */
+  found?: VoiceFile[];
+  /**
+   * The audio file's real name (no extension) when it differs from `file`: the game's audio is sometimes
+   * named after an older topic name. Matched by line ID and response number.
+   */
+  audioName?: string;
+}
+
+export interface VoiceFile {
+  /** Folder inside the archive, lower case, e.g. "sound\\voice\\oblivion.esm\\imperial\\m". */
+  folder: string;
+  archive: string;
+  hasLip: boolean;
 }
 
 export interface SwapPlan {
@@ -60,6 +74,8 @@ export interface SwapPlan {
   npc: { formId: number; editorId: string; name: string; race: string; female: boolean; hasFaceData: boolean };
   edits: TextEdit[];
   voice: VoiceEntry[];
+  /** Set when the voice archives were checked. */
+  voiceCheck?: { archives: string[]; voiceFound: number; voiceMissing: number; nameFound: number; nameMissing: number };
   /** Lines that talk about the character with a gendered word but no name (not edited). */
   pronounOnly: { editId: string; quest: string; text: string }[];
   /** Places the name shows up that the tool can't change (scripts, editor IDs...). */
