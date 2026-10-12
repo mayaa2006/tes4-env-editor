@@ -1,0 +1,15 @@
+{
+  "name": "@tes4/esm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Oblivion plugin (ESM/ESP) reader and writer, plus the character-swap tool",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
+  }
+}

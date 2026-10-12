@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "cli": "tsx packages/cli/src/main.ts",
+    "tes4": "tsx packages/tes4/src/cli.ts",
     "dev": "npm run dev -w @tes5/studio",
     "dev:web": "npm run dev:web -w @tes5/studio",
     "build": "npm run build -w @tes5/studio",
