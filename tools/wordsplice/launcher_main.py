@@ -8,6 +8,10 @@ for stream in ('stdout', 'stderr'):
         setattr(sys, stream, open(os.devnull, 'w'))
 os.environ.setdefault('HF_HUB_DISABLE_SYMLINKS_WARNING', '1')
 
+from wordsplice import paths  # noqa: E402
+
+paths.use_portable_environment()  # before anything that downloads the speech model
+
 from wordsplice.__main__ import main  # noqa: E402
 
 if __name__ == '__main__':

@@ -2,6 +2,10 @@
 
 Each version here is published as a Windows installer and portable exe on the [releases page](https://github.com/mayaa2006/tes4-env-editor/releases).
 
+## 0.4.1
+
+- **Word Splicer is portable.** The Windows program keeps everything in a `data` folder next to `WordSplicer.exe`: settings, your clips and choices, and the downloaded speech model. Nothing goes in your user profile or Documents, so you can copy the folder to another drive or PC (the model comes with it), and deleting it removes everything. If the folder isn't writable it falls back to your profile and says so. `--data <folder>` picks a different data folder.
+
 ## 0.4.0
 
 - **Word Splicer as a Windows program.** `WordSplicer-0.4.0-windows.zip` on this release: unzip and double-click `WordSplicer.exe`. A small window asks for the folder of voice lines (and, optionally, the swap plan and where to keep your work), remembers them for next time, and opens the screen in your browser when you press Start. The first time you find words it downloads a speech model (about 140 MB). The build checks the finished program starts, serves a line, opens its window and loads the speech libraries before it is published. The screen also now says so while the speech model downloads instead of looking stuck.

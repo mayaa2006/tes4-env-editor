@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import audio
+from . import audio, paths
 from .rules import norm
 from .splice import snap
 
@@ -55,7 +55,8 @@ class Aligner:
                     from faster_whisper import WhisperModel
                 except ImportError as e:
                     raise AlignUnavailable('Automatic word finding needs faster-whisper (pip install faster-whisper).') from e
-                self._model = WhisperModel(self.model_name, device='cpu', compute_type='int8')
+                models = paths.models_dir()  # portable: keep the downloaded model beside the program
+                self._model = WhisperModel(self.model_name, device='cpu', compute_type='int8', download_root=str(models) if models else None)
         return self._model
 
     def words(self, path: str, a: audio.Audio, hint: str = '') -> list[dict]:

@@ -12,6 +12,8 @@ It runs on your computer only. Nothing is uploaded.
 
 Windows may say it "protected your PC" because the program isn't signed: choose **More info → Run anyway**. The first time you press *Find words in all lines* it downloads a speech model (about 140 MB), so it needs internet once. Your choices are remembered next time.
 
+**It is portable.** Everything the program writes goes in a `data` folder next to `WordSplicer.exe`: your settings, your clips and choices (`data\work`), and the speech model (`data\models`). Nothing is put in your user profile, Documents or the registry. Copy or move the whole `WordSplicer` folder (to another drive, a USB stick, another PC) and it all comes with you, including the downloaded model; delete the folder and nothing is left behind. Your voice lines folder is wherever you point it. If the program is in a folder Windows won't let it write to (like `Program Files`), it falls back to your user profile and says so in the small window. To use a different data folder, run `WordSplicer.exe --data D:\somewhere`.
+
 ## Set up from source (Windows)
 
 1. Install Python 3.10 or newer from <https://www.python.org/downloads/> and tick **Add python.exe to PATH**.

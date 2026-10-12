@@ -6,16 +6,38 @@ import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from . import audio
+from . import audio, paths
 
 
 def settings_dir() -> Path:
+    portable = paths.data_dir()
+    if portable:
+        return portable
     base = os.environ.get('APPDATA') or os.environ.get('XDG_CONFIG_HOME') or str(Path.home() / '.config')
     return Path(base) / 'WordSplicer'
 
 
 def default_work_dir() -> str:
-    return str(Path.home() / 'Documents' / 'WordSplicer')
+    portable = paths.data_dir()
+    return str(portable / 'work') if portable else str(Path.home() / 'Documents' / 'WordSplicer')
+
+
+def _relative_to_data(value: str) -> str:
+    """In portable mode, keep paths inside the data folder relative, so the folder still works after it is moved."""
+    portable = paths.data_dir()
+    if portable and value:
+        try:
+            return Path(value).resolve().relative_to(portable).as_posix()
+        except ValueError:
+            pass
+    return value
+
+
+def _absolute(value: str) -> str:
+    portable = paths.data_dir()
+    if portable and value and not Path(value).is_absolute() and not (len(value) > 1 and value[1] == ':'):
+        return str(portable / value)
+    return value
 
 
 @dataclass
@@ -32,7 +54,7 @@ def load(path: Path | None = None) -> Settings:
     path = path or settings_dir() / 'settings.json'
     try:
         raw = json.loads(path.read_text(encoding='utf8'))
-        return Settings(**{k: str(raw.get(k, '')) for k in ('lines', 'plan', 'work')})
+        return Settings(**{k: _absolute(str(raw.get(k, ''))) for k in ('lines', 'plan', 'work')})
     except (OSError, ValueError):
         return Settings()
 
@@ -41,7 +63,7 @@ def save(s: Settings, path: Path | None = None) -> None:
     path = path or settings_dir() / 'settings.json'
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(asdict(s), indent=1), encoding='utf8')
+        path.write_text(json.dumps({k: _relative_to_data(v) for k, v in asdict(s).items()}, indent=1), encoding='utf8')
     except OSError:
         pass  # not being able to remember is not worth stopping for
 

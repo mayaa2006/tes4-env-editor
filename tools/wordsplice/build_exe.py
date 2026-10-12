@@ -38,6 +38,7 @@ def main() -> int:
     (out / 'README.txt').write_text(
         'Word Splicer\n\nDouble-click WordSplicer.exe. Choose the folder of voice lines, then press Start.\n'
         'The first time you press "Find words in all lines", it downloads a speech model (about 140 MB), so it needs internet once.\n'
+        'Portable: everything is kept in the "data" folder next to WordSplicer.exe, including that model. Copy the whole folder to take it with you.\n'
         'Windows may say it "protected your PC" because the program is not signed: choose More info, then Run anyway.\n', encoding='utf8')
     archive = shutil.make_archive(str(HERE / 'dist' / f'WordSplicer-{version}-windows'), 'zip', HERE / 'dist', 'WordSplicer')
     print(f'built {archive}')

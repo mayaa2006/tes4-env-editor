@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
-from . import __version__
+from . import __version__, paths
 from .app import App, UserError
 from .server import serve
 
@@ -15,7 +16,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument('command', nargs='?', choices=['serve', 'auto'], default='serve',
                    help='serve: open the screen (default). auto: fill in and export every line that has clips for its words, no screen.')
     p.add_argument('--lines', type=Path, default=None, help='folder of existing voice lines (e.g. the "splice" folder from the swap scan)')
-    p.add_argument('--work', type=Path, default=Path('wordsplice-work'), help='where your bank, choices and cache are kept (default: ./wordsplice-work)')
+    p.add_argument('--work', type=Path, default=None, help='where your bank, choices and cache are kept (default: <data>/work when --data is used, otherwise ./wordsplice-work)')
     p.add_argument('--out', type=Path, default=None, help='where finished lines are written (default: <work>/output)')
     p.add_argument('--plan', type=Path, default=None, help='swap-plan.json from the swap scan (optional; shows expected wording)')
     p.add_argument('--model', default='base.en', help='speech model used to find words (default: base.en)')
@@ -24,8 +25,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument('--redo', action='store_true', help='auto: also redo lines you already worked on')
     p.add_argument('--gui', action='store_true', help='open the small window for choosing folders (the default when --lines is not given)')
     p.add_argument('--smoke', type=Path, default=None, metavar='REPORT', help=argparse.SUPPRESS)
+    p.add_argument('--data', type=Path, default=None, help='keep everything (settings, work, speech model) in this folder, e.g. to run from a USB stick')
     p.add_argument('--version', action='version', version=__version__)
     args = p.parse_args(argv)
+    if args.data:
+        os.environ['WORDSPLICER_DATA'] = str(args.data)
+    paths.use_portable_environment()  # before anything downloads the speech model
     if args.smoke:
         from .smoke import run as smoke
         return smoke(args.smoke)
@@ -36,7 +41,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.lines is None or not args.lines.is_dir():
         print(f'error: {args.lines} is not a folder' if args.lines else 'error: --lines <folder> is required', file=sys.stderr)
         return 2
-    app = App(args.lines, args.work, args.out, args.plan, args.model)
+    work = args.work or (paths.data_dir() / 'work' if paths.data_dir() else Path('wordsplice-work'))
+    app = App(args.lines, work, args.out, args.plan, args.model)
     if args.command == 'auto':
         return run_auto(app, args.redo)
     serve(app, args.port, not args.no_browser)
