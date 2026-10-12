@@ -51,6 +51,7 @@ class App:
                 'path': rel, 'voice': lines.voice_of(rel),
                 'aligned': words is not None,
                 'targets': len([w for w in words or [] if norm(w['text']) in self.rules]),
+                'text': ' '.join(w['text'] for w in words or []),
                 'edits': len([e for e in saved['edits'] if not e.get('skip')]), 'exported': saved.get('exported', False),
                 'subtitle': self.plan.get(Path(rel).stem.lower(), {}).get('subtitle', ''),
             })

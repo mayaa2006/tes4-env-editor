@@ -105,3 +105,62 @@ def test_marking_a_word_by_hand_on_the_waveform(page):
     pg.mouse.move(box['x'] + box['width'] * 0.25, box['y'] + 40)
     pg.mouse.up()
     assert 'marked part' in pg.inner_text('.edit.sel')
+
+
+def add_line(app, tmp, voice, name, words):
+    """Another fake line in a different voice folder, with its words already 'listened to'."""
+    import json
+    from .conftest import SR, make_line
+    d = tmp / 'lines' / 'sound' / 'voice' / 'oblivion.esm' / voice[0] / voice[1]
+    d.mkdir(parents=True, exist_ok=True)
+    samples, timing = make_line(words)
+    path = d / name
+    path.write_bytes(audio.encode_mp3(samples, SR, 64))
+    app.aligner._cache_file(str(path)).write_text(json.dumps({'model': 'base.en', 'words': timing}))
+
+
+def test_find_lines_by_voice_file_voice_or_words(workspace):
+    app, rel, tmp = workspace
+    add_line(app, tmp, ('nord', 'f'), 'mq00_greeting_00026d58_6.mp3', [('Welcome', 350), ('home', 450)])
+    add_line(app, tmp, ('nord', 'm'), 'mq03_goodbye_0009226a_1.mp3', [('Farewell', 300), ('friend', 400)])
+    srv = ThreadingHTTPServer(('127.0.0.1', 0), None)
+    port = srv.server_address[1]
+    srv.RequestHandlerClass = make_handler(app, port)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    with sync_api.sync_playwright() as p:
+        try:
+            browser = p.chromium.launch(executable_path=find_chromium()) if find_chromium() else p.chromium.launch()
+        except Exception as e:
+            pytest.skip(f'No browser available: {e}')
+        pg = browser.new_page(viewport={'width': 1280, 'height': 800})
+        pg.goto(f'http://127.0.0.1:{port}/')
+        pg.click('#help button')
+        names = lambda: [li.inner_text().split('\n')[0] for li in pg.query_selector_all('#lines li')]
+        assert len(names()) == 3 and pg.inner_text('#count') == '3 of 3'
+
+        pg.fill('#search', '00026D58')  # part of the file name, any case
+        assert names() == ['mq00_greeting_00026d58_6.mp3'] and pg.inner_text('#count') == '1 of 3'
+        pg.fill('#search', 'Sound\\Voice\\Oblivion.esm\\Nord\\M\\mq03_goodbye_0009226A_1.mp3')  # a pasted Windows path
+        assert names() == ['mq03_goodbye_0009226a_1.mp3']
+        pg.fill('#search', 'mq00 greeting')  # every word must match
+        assert names() == ['mq00_greeting_00026d58_6.mp3']
+        pg.fill('#search', 'breton/m')  # by voice
+        assert names() == ['q_topic_00000001_1.mp3']
+        pg.fill('#search', 'farewell friend')  # by the words in the line
+        assert names() == ['mq03_goodbye_0009226a_1.mp3'] and 'Farewell' in pg.inner_text('#lines li')
+        pg.fill('#search', 'mark')  # a word that could break the highlighting still just finds nothing
+        assert names() == [] and 'No lines match' in pg.inner_text('#linesEmpty')
+
+        pg.fill('#search', 'nord')
+        assert len(names()) == 2
+        pg.select_option('#voiceFilter', 'nord/f')
+        assert names() == ['mq00_greeting_00026d58_6.mp3']
+        pg.press('#search', 'Escape')  # clears the search, keeps the voice filter
+        assert names() == ['mq00_greeting_00026d58_6.mp3']
+        pg.select_option('#voiceFilter', '')
+        pg.fill('#search', 'goodbye')
+        pg.press('#search', 'Enter')  # opens the first result
+        pg.wait_for_selector('#words .word')
+        assert 'mq03_goodbye_0009226a_1.mp3' in pg.inner_text('#lineName')
+        browser.close()
+    srv.shutdown()

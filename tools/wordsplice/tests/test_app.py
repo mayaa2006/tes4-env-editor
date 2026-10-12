@@ -91,3 +91,8 @@ def test_rules_can_be_changed(workspace):
     assert app.rules == {'late': 'early'}
     assert {w['norm'] for w in app.line(rel)['words'] if w['target']} == {'late'}
     assert json.loads((app.work_dir / 'rules.json').read_text()) == {'late': 'early'}
+
+
+def test_state_includes_the_words_heard_so_lines_can_be_searched(workspace):
+    app, rel, _ = workspace
+    assert app.state()['lines'][0]['text'] == 'Tell Martin, he is late.'

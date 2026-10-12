@@ -5,6 +5,7 @@ Each version here is published as a Windows installer and portable exe on the [r
 ## 0.4.0
 
 - **Word Splicer as a Windows program.** `WordSplicer-0.4.0-windows.zip` on this release: unzip and double-click `WordSplicer.exe`. A small window asks for the folder of voice lines (and, optionally, the swap plan and where to keep your work), remembers them for next time, and opens the screen in your browser when you press Start. The first time you find words it downloads a speech model (about 140 MB). The build checks the finished program starts, serves a line, opens its window and loads the speech libraries before it is published. The screen also now says so while the speech model downloads instead of looking stuck.
+- **Find lines.** A search box above the list of lines finds them by voice file name (any part, any case, or a whole pasted Windows path), by voice (e.g. `breton/m`), by the expected wording, or by the words heard in the line; several words must all match, matches are highlighted, Enter opens the first result and Esc clears. A voice menu narrows the list to one race and sex.
 
 ## 0.3.0
 

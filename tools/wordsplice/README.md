@@ -31,8 +31,9 @@ Your work is kept in the `wordsplice-work` folder inside `tools\wordsplice`: you
 
 1. **Add clips** (right side). Type the word you recorded, give the take a name if you like, choose one or more audio files. Add as many takes of a word as you want. Tag a take with a voice (e.g. `breton/m`) and lines in that voice will pick it first.
 2. Press **Find words in all lines** once. A small speech model listens to each line and notes where every word is spoken. It only does each line once.
-3. Open a line. Words that get replaced by default are highlighted; click one to replace it (or click any other word to replace that too). For each replacement choose **Auto** or a particular take, press **▶ With replacements** to hear it, and nudge the edges by 10 ms if a cut sounds off. You can also drag the blue edges on the waveform, or drag over empty space to mark a part yourself.
-4. Press **Save line as .mp3**. It is written at the original line's sample rate and bitrate.
+3. Find a line with the box at the top of the list: type part of a voice file name (`MQ00_GREETING`, `00026D58`, or a whole pasted path), a voice such as `breton/m`, or words from the line (once its words have been found). Several words must all match. **Enter** opens the first result and **Esc** clears the box. The voice menu under it narrows the list to one race and sex.
+4. Open a line. Words that get replaced by default are highlighted; click one to replace it (or click any other word to replace that too). For each replacement choose **Auto** or a particular take, press **▶ With replacements** to hear it, and nudge the edges by 10 ms if a cut sounds off. You can also drag the blue edges on the waveform, or drag over empty space to mark a part yourself.
+5. Press **Save line as .mp3**. It is written at the original line's sample rate and bitrate.
 
 **Auto-fill this line** and **Auto-fill every line** do steps 3–4 for every default word that has a clip in the bank. Words with no clip yet are listed so you know what to record next.
 
